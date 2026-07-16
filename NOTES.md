@@ -30,4 +30,4 @@ Notes
 - Logger writes structured JSON to stderr; SetLoggerOutput redirects logs for tests.
 - wrapResolve logs resolver name, scalar args only, duration_ms, and status (info/error).
 
-Reviewed by: DM
+Reviewed By: DM
