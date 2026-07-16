@@ -1,63 +1,33 @@
-1. The bug in the seed script
+Summary
 
-The seeder failed to connect with a sensible default DSN. The default connection string was invalid/masked; set the fallback to match docker-compose: postgres://admin:todo@localhost:5432/homework?sslmode=disable. I found this by attempting to run the seeder (go run ./cmd/seed) and inspecting cmd/seed/main.go.
+- Fixed seeder fallback DSN to match docker-compose.
+- Minimal GraphQL API exposing Task.dueDate (YYYY-MM-DD).
+- Added structured JSON logger and resolver-level timing (wrapResolve).
+- Docker: Dockerfile + docker-compose to run Postgres, API, and UI (UI :8080, API :8081).
+- Tests: focused table-driven unit tests and an integration test.
 
-2. Library / structure choices
+Run (from repo root)
 
-- GraphQL library: github.com/graphql-go/graphql + github.com/graphql-go/handler. Chosen because it is minimal, requires no code generation, and is fast to wire up for a small exercise (fewer steps to a working API). This minimizes setup time.
-- Structure: small cmd/ directories: cmd/seed and cmd/server. Data-access helpers are in cmd/server/main.go to keep the change minimal for the exercise; in a larger project they'd be refactored into packages.
+Docker (recommended):
 
-3. The new field
+  docker compose up -d --build
+  - UI: http://localhost:8080
+  - API: http://localhost:8081/graphql
+  After Postgres is ready, seed the DB:
 
-- Exposed field: dueDate on Task (string, formatted as YYYY-MM-DD). Rationale: exposes a real DB field end-to-end and is trivial to display in the provided UI.
+  go run ./cmd/seed
 
-4. Tradeoffs / what was skipped
+Local development:
 
-- Skipped: more thorough package layout (separate data layer and resolvers), tests, structured JSON logger, resolver timing, and Dockerizing the API. These are straightforward extensions but would add time.
-
-5. How to run (from a fresh clone)
-
-Option A — Run API locally (fastest during development)
-
-1. Start Postgres (docker-compose provides the DB and schema):
-
-   docker compose up -d
-
-2. Seed the database (requires Go 1.25+ installed locally):
-
-   go run ./cmd/seed
-
-3. Run the API server locally (serves GraphQL on :8080):
-
-   go run ./cmd/server
-
-4. Serve the UI (if your browser blocks file:// → http:// requests):
-
-   python3 -m http.server 8081 --directory web
-
-   Open http://localhost:8081 in your browser. The web UI expects the API at http://localhost:8080/graphql (the local server).
-
-Option B — Run everything via Docker (recommended for "one command" runs)
-
-1. From the repo root, bring up the full stack (Postgres, API, and static web UI). The compose file serves the UI on host port 8080 and the API on host port 8081:
-
-   docker compose up -d --build
-
-   - UI will be available at: http://localhost:8080
-   - GraphQL API will be available at: http://localhost:8081/graphql
-
-2. Seed the database (from the host) after postgres is up:
-
-   go run ./cmd/seed
-
-3. Open http://localhost:8080 in a browser — the web UI will fetch GraphQL data from http://localhost:8081/graphql (the compose API).
+  docker compose up -d
+  go run ./cmd/seed
+  go run ./cmd/server
+  # optionally serve the UI if needed
+  python3 -m http.server 8081 --directory web
 
 Notes
 
-- This compose setup lets you run everything without any python/http-server step.
-- To stop everything started by compose:
+- Logger writes structured JSON to stderr; SetLoggerOutput redirects logs for tests.
+- wrapResolve logs resolver name, scalar args only, duration_ms, and status (info/error).
 
-  docker compose down
-
-
-Reviewed by: DB
+Reviewed by: DM
