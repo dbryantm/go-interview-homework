@@ -469,7 +469,7 @@ func createTask(ctx context.Context, db *sql.DB, userID int64, title string, des
 	if err != nil {
 		return Task{}, err
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer tx.Rollback()
 	var id int64
 	// Note: argument order must match the SQL placeholders ($1..$5): user_id, title, description, status, due_date
 	if err := tx.QueryRowContext(ctx, "INSERT INTO tasks (user_id, title, description, status, due_date) VALUES ($1, $2, $3, $4, $5) RETURNING id", userID, title, description, status, due).Scan(&id); err != nil {

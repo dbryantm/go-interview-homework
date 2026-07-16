@@ -118,7 +118,7 @@ func seed(ctx context.Context, db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = tx.Rollback() }()
+	defer tx.Rollback()
 
 	for _, u := range seedData {
 		var userID int64
