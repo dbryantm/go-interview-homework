@@ -327,6 +327,9 @@ func fetchAllUsers(ctx context.Context, db *sql.DB) ([]User, error) {
 		}
 		out = append(out, u)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -358,6 +361,9 @@ func fetchTaskByID(ctx context.Context, db *sql.DB, id int64) (Task, error) {
 			if err := tagsRows.Scan(&tag); err == nil {
 				t.Tags = append(t.Tags, tag)
 			}
+		}
+		if err := tagsRows.Err(); err != nil {
+			return Task{}, err
 		}
 	}
 	return t, nil
@@ -402,8 +408,14 @@ func fetchTasksForUser(ctx context.Context, db *sql.DB, userID int64, status *st
 					t.Tags = append(t.Tags, tag)
 				}
 			}
+			if err := tagsRows.Err(); err != nil {
+				return nil, err
+			}
 		}
 		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -458,8 +470,14 @@ func fetchTasks(ctx context.Context, db *sql.DB, status *string, userId *int64) 
 					t.Tags = append(t.Tags, tag)
 				}
 			}
+			if err := tagsRows.Err(); err != nil {
+				return nil, err
+			}
 		}
 		out = append(out, t)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
