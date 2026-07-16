@@ -16,21 +16,39 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// defaultDSN is the fallback Postgres DSN used when DATABASE_URL is not set.
 const defaultDSN = "postgres://admin:todo@localhost:5432/homework?sslmode=disable"
 
+// User represents an application user.
+//
+// Public fields are included in the GraphQL API responses.
 type User struct {
+	// ID is the unique numeric identifier for the user.
 	ID    int64  `json:"id"`
+	// Email is the user's contact email address.
 	Email string `json:"email"`
+	// Name is the display name for the user.
 	Name  string `json:"name"`
 }
 
+// Task represents a todo item owned by a User.
+//
+// DueDate may be nil when a task has no deadline. Tags is the list of
+// associated string labels.
 type Task struct {
+	// ID is the unique numeric identifier for the task.
 	ID          int64      `json:"id"`
+	// UserID is the owner user's numeric ID.
 	UserID      int64      `json:"userId"`
+	// Title is the short title for the task.
 	Title       string     `json:"title"`
+	// Description is an optional longer description for the task.
 	Description *string    `json:"description"`
+	// Status is one of: pending, in_progress, done.
 	Status      string     `json:"status"`
+	// DueDate is optional and, when present, indicates the task deadline.
 	DueDate     *time.Time `json:"dueDate"`
+	// Tags are the labels associated with the task.
 	Tags        []string   `json:"tags"`
 }
 
