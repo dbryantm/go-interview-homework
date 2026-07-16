@@ -18,5 +18,30 @@ services:
       timeout: 3s
       retries: 10
 
+  api:
+    build: .
+    container_name: allyApi
+    restart: unless-stopped
+    environment:
+      # point the API container to the postgres service in compose
+      DATABASE_URL: "postgres://admin:todo@postgres:5432/homework?sslmode=disable"
+    depends_on:
+      - postgres
+    # map container port 8080 -> host port 8081 so it can run alongside a local server
+    ports:
+      - "8081:8080"
+
+  web:
+    image: nginx:alpine
+    container_name: allyWeb
+    restart: unless-stopped
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+
 volumes:
   todo_pgdata:
+# no change
