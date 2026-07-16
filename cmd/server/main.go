@@ -24,11 +24,11 @@ const defaultDSN = "postgres://admin:todo@localhost:5432/homework?sslmode=disabl
 // Public fields are included in the GraphQL API responses.
 type User struct {
 	// ID is the unique numeric identifier for the user.
-	ID    int64  `json:"id"`
+	ID int64 `json:"id"`
 	// Email is the user's contact email address.
 	Email string `json:"email"`
 	// Name is the display name for the user.
-	Name  string `json:"name"`
+	Name string `json:"name"`
 }
 
 // Task represents a todo item owned by a User.
@@ -37,19 +37,19 @@ type User struct {
 // associated string labels.
 type Task struct {
 	// ID is the unique numeric identifier for the task.
-	ID          int64      `json:"id"`
+	ID int64 `json:"id"`
 	// UserID is the owner user's numeric ID.
-	UserID      int64      `json:"userId"`
+	UserID int64 `json:"userId"`
 	// Title is the short title for the task.
-	Title       string     `json:"title"`
+	Title string `json:"title"`
 	// Description is an optional longer description for the task.
-	Description *string    `json:"description"`
+	Description *string `json:"description"`
 	// Status is one of: pending, in_progress, done.
-	Status      string     `json:"status"`
+	Status string `json:"status"`
 	// DueDate is optional and, when present, indicates the task deadline.
-	DueDate     *time.Time `json:"dueDate"`
+	DueDate *time.Time `json:"dueDate"`
 	// Tags are the labels associated with the task.
-	Tags        []string   `json:"tags"`
+	Tags []string `json:"tags"`
 }
 
 func main() {
@@ -124,13 +124,13 @@ func buildSchema(db *sql.DB) graphql.Schema {
 			"dueDate": &graphql.Field{
 				Type: graphql.String,
 				// Return the date in YYYY-MM-DD format for the UI; nil if absent
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Task.dueDate", func(p graphql.ResolveParams) (any, error) {
 					task := p.Source.(Task)
 					if task.DueDate == nil {
 						return nil, nil
 					}
 					return task.DueDate.Format("2006-01-02"), nil
-				},
+				}),
 			},
 			"tags": &graphql.Field{Type: graphql.NewList(graphql.NewNonNull(graphql.String))},
 		},
@@ -148,14 +148,14 @@ func buildSchema(db *sql.DB) graphql.Schema {
 				Args: graphql.FieldConfigArgument{
 					"status": &graphql.ArgumentConfig{Type: statusEnum},
 				},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("User.tasks", func(p graphql.ResolveParams) (any, error) {
 					userObj := p.Source.(User)
 					var status *string
 					if s, ok := p.Args["status"].(string); ok {
 						status = &s
 					}
 					return fetchTasksForUser(p.Context, db, userObj.ID, status)
-				},
+				}),
 			},
 		},
 	})
@@ -164,11 +164,11 @@ func buildSchema(db *sql.DB) graphql.Schema {
 	// Because taskType was created earlier, set the field now
 	taskType.AddFieldConfig("user", &graphql.Field{
 		Type: graphql.NewNonNull(userType),
-		Resolve: func(p graphql.ResolveParams) (any, error) {
+		Resolve: wrapResolve("Task.user", func(p graphql.ResolveParams) (any, error) {
 			task := p.Source.(Task)
 			u, err := fetchUserByID(p.Context, db, task.UserID)
 			return u, err
-		},
+		}),
 	})
 
 	// Root Query
@@ -178,31 +178,31 @@ func buildSchema(db *sql.DB) graphql.Schema {
 			"user": &graphql.Field{
 				Type: userType,
 				Args: graphql.FieldConfigArgument{"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)}},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Query.user", func(p graphql.ResolveParams) (any, error) {
 					idStr := p.Args["id"].(string)
 					id, err := strconv.ParseInt(idStr, 10, 64)
 					if err != nil {
 						return nil, nil
 					}
 					return fetchUserByID(p.Context, db, id)
-				},
+				}),
 			},
 			"users": &graphql.Field{Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(userType))),
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Query.users", func(p graphql.ResolveParams) (any, error) {
 					return fetchAllUsers(p.Context, db)
-				},
+				}),
 			},
 			"task": &graphql.Field{
 				Type: taskType,
 				Args: graphql.FieldConfigArgument{"id": &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)}},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Query.task", func(p graphql.ResolveParams) (any, error) {
 					idStr := p.Args["id"].(string)
 					id, err := strconv.ParseInt(idStr, 10, 64)
 					if err != nil {
 						return nil, nil
 					}
 					return fetchTaskByID(p.Context, db, id)
-				},
+				}),
 			},
 			"tasks": &graphql.Field{
 				Type: graphql.NewNonNull(graphql.NewList(graphql.NewNonNull(taskType))),
@@ -210,7 +210,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 					"status": &graphql.ArgumentConfig{Type: statusEnum},
 					"userId": &graphql.ArgumentConfig{Type: graphql.ID},
 				},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Query.tasks", func(p graphql.ResolveParams) (any, error) {
 					var status *string
 					if s, ok := p.Args["status"].(string); ok {
 						status = &s
@@ -223,7 +223,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 						}
 					}
 					return fetchTasks(p.Context, db, status, userId)
-				},
+				}),
 			},
 		},
 	})
@@ -241,7 +241,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 					"dueDate":     &graphql.ArgumentConfig{Type: graphql.String},
 					"tags":        &graphql.ArgumentConfig{Type: graphql.NewList(graphql.NewNonNull(graphql.String))},
 				},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Mutation.createTask", func(p graphql.ResolveParams) (any, error) {
 					uidStr := p.Args["userId"].(string)
 					uid, err := strconv.ParseInt(uidStr, 10, 64)
 					if err != nil {
@@ -268,7 +268,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 						}
 					}
 					return createTask(p.Context, db, uid, title, descPtr, "pending", duePtr, tags)
-				},
+				}),
 			},
 			"updateTaskStatus": &graphql.Field{
 				Type: taskType,
@@ -276,7 +276,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 					"id":     &graphql.ArgumentConfig{Type: graphql.NewNonNull(graphql.ID)},
 					"status": &graphql.ArgumentConfig{Type: graphql.NewNonNull(statusEnum)},
 				},
-				Resolve: func(p graphql.ResolveParams) (any, error) {
+				Resolve: wrapResolve("Mutation.updateTaskStatus", func(p graphql.ResolveParams) (any, error) {
 					idStr := p.Args["id"].(string)
 					id, err := strconv.ParseInt(idStr, 10, 64)
 					if err != nil {
@@ -284,7 +284,7 @@ func buildSchema(db *sql.DB) graphql.Schema {
 					}
 					status := p.Args["status"].(string)
 					return updateTaskStatus(p.Context, db, id, status)
-				},
+				}),
 			},
 		},
 	})
@@ -497,4 +497,36 @@ func updateTaskStatus(ctx context.Context, db *sql.DB, id int64, status string) 
 func mustJSON(v any) string {
 	b, _ := json.MarshalIndent(v, "", "  ")
 	return string(b)
+}
+
+// wrapResolve instruments a resolver with timing and structured logs.
+func wrapResolve(name string, fn func(p graphql.ResolveParams) (any, error)) func(p graphql.ResolveParams) (any, error) {
+	return func(p graphql.ResolveParams) (any, error) {
+		start := time.Now()
+		res, err := fn(p)
+		dur := time.Since(start)
+
+		// Sanitize args: include simple scalar values, otherwise record type.
+		args := map[string]interface{}{}
+		for k, v := range p.Args {
+			switch v.(type) {
+			case string, bool, int, int64, float64:
+				args[k] = v
+			default:
+				args[k] = fmt.Sprintf("%T", v)
+			}
+		}
+
+		fields := map[string]interface{}{
+			"args":        args,
+			"duration_ms": dur.Milliseconds(),
+		}
+		if err != nil {
+			fields["error"] = err.Error()
+			Log("error", name, "resolver failed", fields)
+		} else {
+			Log("info", name, "resolver completed", fields)
+		}
+		return res, err
+	}
 }
