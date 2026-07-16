@@ -4,7 +4,7 @@
 //   1. Add the new field you chose to the `QUERY` below.
 //   2. Render it inside renderUser / renderTask.
 
-const ENDPOINT = "http://localhost:8080/graphql";
+const ENDPOINT = "http://localhost:8081/graphql";
 
 const QUERY = `
   query Board {
@@ -16,6 +16,7 @@ const QUERY = `
         id
         title
         status
+        dueDate
         tags
       }
     }
@@ -61,6 +62,10 @@ function renderTask(task) {
   });
 
   const meta = el("div", { class: "task-meta" }, [statusPill]);
+
+  if (task.dueDate) {
+    meta.appendChild(el("span", { class: "due", text: `Due: ${task.dueDate}` }));
+  }
 
   for (const tag of task.tags || []) {
     meta.appendChild(el("span", { class: "tag", text: tag }));
